@@ -1,40 +1,30 @@
 require_relative 'user.rb'
-require_relative 'cards.rb'
-require 'byebug'
+require_relative 'card.rb'
+require_relative 'deck.rb'
+require_relative 'hand.rb'
+require_relative 'interface.rb'
 
 class Game
+  include Interface
 
-  attr_accessor :bank
+  attr_accessor :bank, :deck
 
-  def initialize    
+  def initialize
     @dealer = Dealer.new
     @bank = 0    
   end
 
   def start
-
-    puts "Введите Ваше имя"
-    name = gets.to_s.chomp
-
-    if name != ""
-      @user = User.new(name)
-    else
-      return puts "Вы не ввели имя"
-    end    
+    user_name
 
     loop do
       game_begin
       
-      loop do        
-        puts "  Выберите действие, введя его номер из списка:
+      loop do
+        actions
 
-          1. Пропустить
-          2. Добавить карту
-          3. Открыть карты"
-          puts
-
-        input = gets.chomp.to_i
-        case input        
+        input = choice
+        case input
           when 1
             pass
           when 2
@@ -50,108 +40,70 @@ class Game
   end
 
   def pass
-    if @dealer.points_sum < 17
-      @dealer.us_cards << @cards.take_card
-      @cards.card_deck.delete(@user.us_cards[-1])
+    if @dealer.hand.points < 17
+      @dealer.hand.add_card(@deck)
     end
 
-    @user.us_show
-    @dealer.stars
+    card_show(@user)
+    stars(@dealer)
   end
 
   def add_cards
-    if @user.us_cards.size < 3
-      @user.us_cards << @cards.take_card
-      @cards.card_deck.delete(@user.us_cards[-1])
+    if @user.hand.current.size < 3
+      @user.hand.add_card(@deck)
     end
 
-    if @dealer.us_cards.size < 3 && @dealer.points_sum < 17
-      @dealer.us_cards << @cards.take_card
+    if @dealer.hand.current.size < 3 && @dealer.hand.points < 17
+      @dealer.hand.add_card(@deck)
     end
-       
-    @user.us_show
-    @dealer.us_show
-    
+
+    card_show(@user)
+    dealer_show(@dealer)
     result
   end
 
   def open_cards
-    @user.us_show
-    @dealer.us_show
-    result
+    if @dealer.hand.current.size == 3 || @dealer.hand.points >= 17
+      card_show(@user)
+      dealer_show(@dealer)
+      result
+    else
+      return
+    end
   end
 
   def game_begin
-    @cards = Cards.new    
-
-    @user.us_cards.clear
-    @dealer.us_cards.clear
+    @deck = Deck.new
+    
+    @user.hand.current.clear
+    @dealer.hand.current.clear
 
     bank_begin
-    show_bank
+
+    2.times { @user.hand.add_card(@deck) }
+    2.times { @dealer.hand.add_card(@deck) }
     
-    @user.us_cards << @cards.drop[0]
-    @user.us_cards << @cards.drop[1]
-    @dealer.us_cards << @cards.drop[2]
-    @dealer.us_cards << @cards.drop[3]    
-    
-    @user.us_show
-    @dealer.stars
+    card_show(@user)
+    stars(@dealer)
   end
 
   def bank_begin
-    if @user.money == 0 || @dealer.money == 0
-      puts "При отсутствии у одного из игроков баксов
-            игра продолжаться не может!!!"
-      exit
-    end
-    @user.money -= 10
-    @dealer.money -= 10
-    @bank += 20    
-  end
-
-  def show_bank
-    puts "У Вас $#{@user.money}"
-    puts "У Дилера $#{@dealer.money}"
-    puts "В банке $#{bank}" 
-  end
-
-  def result
-    if (@user.points_sum > @dealer.points_sum) && @user.points_sum <= 21      
-      puts "Победитель #{@user.name}!!!"
-      @user.money += bank
-    elsif
-      (@dealer.points_sum > @user.points_sum) && @dealer.points_sum <= 21      
-      puts "Победитель #{@dealer.name}!"
-      @dealer.money += bank
-    elsif
-      @user.points_sum <= 21 && @dealer.points_sum > 21
-      puts "Победитель #{@user.name}!!!"
-      @user.money += bank
-    elsif
-      @dealer.points_sum <= 21 && @user.points_sum > 21
-      puts "Победитель #{@dealer.name}!"
-      @dealer.money += bank
-    else      
-      puts "    Ничья!!!"      
-      @user.money += bank/2
-      @dealer.money += bank/2      
-    end
-    @bank -= @bank
-    show_bank    
+    money_zero
+    @user.rate
+    @dealer.rate 
+    @bank += 20
+    show_bank
   end
 
   def end_game
-    puts "Хотите продолжить игру? Выберите номер ответа:
-    1. ДА !!!
-    2. НЕТ((("
+    desire
 
-    input = gets.chomp.to_i
-    case input        
+    input = choice
+    case input
       when 1
         return
       when 2
-        exit          
+        exit
     end
   end
 end
