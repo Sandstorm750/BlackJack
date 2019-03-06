@@ -62,14 +62,10 @@ class Game
     result
   end
 
-  def open_cards
-    if @dealer.hand.current.size == 3 || @dealer.hand.points >= 17
-      card_show(@user)
-      dealer_show(@dealer)
-      result
-    else
-      return
-    end
+  def open_cards    
+    card_show(@user)
+    dealer_show(@dealer)
+    result    
   end
 
   def game_begin
